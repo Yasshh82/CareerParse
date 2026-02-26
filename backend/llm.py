@@ -31,7 +31,9 @@ Resume:
             "prompt": prompt,
             "stream": False,
             "options": {
-                "temperature": 0
+                "temperature": 0,
+                "top_p": 0.9,
+                "num_predict": 512 # reduce hallucinations, limits o/p size
             }
         }
     )

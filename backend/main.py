@@ -1,16 +1,32 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, Depends
 from sqlalchemy.orm import Session
 from database import Base, engine, SessionLocal
 from models import Resume, Experience
 from parser import process_resume
 from file_utils import extract_pdf, extract_docx
 
+# Create tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+
+# -------------------------
+# Database Dependency
+# -------------------------
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+# -------------------------
+# Upload Resume Endpoint
+# -------------------------
 @app.post("/upload")
-async def upload(file: UploadFile = File(...)):
+async def upload(file: UploadFile = File(...), db: Session = Depends(get_db)):
 
     if file.filename.endswith(".pdf"):
         text = extract_pdf(file.file)
@@ -21,12 +37,16 @@ async def upload(file: UploadFile = File(...)):
 
     companies, total_months = process_resume(text)
 
-    db = SessionLocal()
-    resume = Resume(raw_text=text, total_experience_months=total_months)
+    # Save Resume
+    resume = Resume(
+        raw_text=text,
+        total_experience_months=total_months
+    )
     db.add(resume)
     db.commit()
     db.refresh(resume)
 
+    # Save Experiences
     for comp in companies:
         exp = Experience(
             resume_id=resume.id,
@@ -41,10 +61,42 @@ async def upload(file: UploadFile = File(...)):
         db.add(exp)
 
     db.commit()
-    db.close()
 
     return {
         "resume_id": resume.id,
         "Companies": companies,
         "total_experience_months": total_months
+    }
+
+
+# -------------------------
+# Get Resume by ID Endpoint
+# -------------------------
+@app.get("/resumes/{resume_id}")
+def get_resume(resume_id: str, db: Session = Depends(get_db)):
+
+    resume = db.query(Resume).filter(Resume.id == resume_id).first()
+
+    if not resume:
+        return {"error": "Resume not found"}
+
+    experiences = db.query(Experience).filter(
+        Experience.resume_id == resume_id
+    ).all()
+
+    return {
+        "resume_id": resume.id,
+        "total_experience_months": resume.total_experience_months,
+        "Companies": [
+            {
+                "Company Name": e.company_name,
+                "Role": e.role,
+                "Tenure": e.tenure_raw,
+                "Start Date": e.start_date,
+                "End Date": e.end_date,
+                "Duration Months": e.duration_months,
+                "Is Current Role": e.is_current_role
+            }
+            for e in experiences
+        ]
     }
