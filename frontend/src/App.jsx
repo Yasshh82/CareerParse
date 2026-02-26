@@ -1,35 +1,79 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { useState } from "react";
+import axios from "axios";
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [file, setFile] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState(null);
+
+  const handleUpload = async () => {
+    if(!file){
+      alert("Please select a file.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    try{
+      setLoading(true);
+
+      const response = await axios.post(
+        "http://127.0.0.1:8000/upload",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+      setResult(response.data);
+    } catch (error) {
+      alert("Upload failed");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <div style={{padding: "40px", fontFamily: "Arial" }}>
+      <h1>CareerParse - Resume Analyser</h1>
+
+      <input
+        type="file"
+        accept=".pdf,.docx"
+        onChange={(e) => setFile(e.target.files[0])}
+      />
+      <button onClick={handleUpload} style={{ marginLeft: "10px"}}>
+        Upload
+      </button> 
+
+      {loading && <p>Processing resume...</p>}
+
+      {result && (
+        <div style={{ marginTop: "30px"}}>
+          <h2>Total Experience: {result.total_experience_months} months</h2>
+
+          {result.Companies.map((company, index) => (
+            <div
+              key={index}
+              style={{
+                border: "1px solid #ccc",
+                padding: "10px",
+                marginBottom: "10px",
+              }}
+              >
+                <h3>{company.company_name}</h3>
+                <p><strong>Role:</strong> {company.role}</p>
+                <p><strong>Tenure:</strong> {company.tenure_raw}</p>
+                <p><strong>Duration:</strong> {company.duration_months} months</p>
+              </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
-export default App
+export default App;

@@ -4,12 +4,20 @@ from database import Base, engine, SessionLocal
 from models import Resume, Experience
 from parser import process_resume
 from file_utils import extract_pdf, extract_docx
+from fastapi.middleware.cors import CORSMiddleware
 
 # Create tables
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # -------------------------
 # Database Dependency
