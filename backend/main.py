@@ -108,3 +108,16 @@ def get_resume(resume_id: str, db: Session = Depends(get_db)):
             for e in experiences
         ]
     }
+
+@app.get("/resumes")
+def get_all_resumes(db: Session = Depends(get_db)):
+    resumes = db.query(Resume).all()
+
+    result = []
+
+    for resume in resumes:
+        result.append({
+            "resume_id": resume.id,
+            "total_experience_months": resume.total_experience_months
+        })
+    return result
