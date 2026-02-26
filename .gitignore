@@ -1,0 +1,24 @@
+# Virtual Environment
+backend/parser_venv/
+venv/
+.venv/
+env/
+
+# Python Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Database
+backend/resumes.db
+
+# Environment Variables / Secrets
+.env
+
+# IDE Folders
+.vscode/
+.idea/
+
+# OS Files
+.DS_Store
+Thumbs.db
