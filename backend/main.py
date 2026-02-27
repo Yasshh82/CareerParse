@@ -110,15 +110,33 @@ def get_resume(resume_id: str, db: Session = Depends(get_db)):
     }
 
 @app.get("/resumes")
-def get_all_resumes(min_experience: int = 0, db: Session = Depends(get_db)):
-    resumes = db.query(Resume).filter(
+def get_all_resumes(
+    min_experience: int = 0,
+    company: str = None,
+    sort: str = "desc",
+    db: Session = Depends(get_db)
+):
+
+    query = db.query(Resume).filter(
         Resume.total_experience_months >= min_experience
-    ).all()
+    )
+
+    if company:
+        query = query.join(Experience).filter(
+            Experience.company_name.ilike(f"%{company}%")
+        )
+
+    if sort == "asc":
+        query = query.order_by(Resume.total_experience_months.asc())
+    else:
+        query = query.order_by(Resume.total_experience_months.desc())
+
+    resumes = query.all()
 
     return [
         {
             "resume_id": resume.id,
-            "total_experience_months": resume.total_experience_months,
+            "total_experience_months": resume.total_experience_months
         }
         for resume in resumes
     ]
