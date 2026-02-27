@@ -60,7 +60,11 @@ async def upload(file: UploadFile = File(...), db: Session = Depends(get_db)):
             resume_id=resume.id,
             company_name=comp["company_name"],
             role=comp["role"],
-            tenure_raw=comp["tenure_raw"],
+            tenure_raw=(
+            ", ".join(comp["tenure_raw"])
+            if isinstance(comp["tenure_raw"], list)
+            else comp["tenure_raw"]
+            ),
             start_date=comp["start_date"],
             end_date=comp["end_date"],
             duration_months=comp["duration_months"],
@@ -114,6 +118,8 @@ def get_all_resumes(
     min_experience: int = 0,
     company: str = None,
     sort: str = "desc",
+    page: int = 1,
+    page_size: int = 6,
     db: Session = Depends(get_db)
 ):
 
@@ -131,15 +137,22 @@ def get_all_resumes(
     else:
         query = query.order_by(Resume.total_experience_months.desc())
 
-    resumes = query.all()
+    total = query.count()
 
-    return [
-        {
-            "resume_id": resume.id,
-            "total_experience_months": resume.total_experience_months
-        }
-        for resume in resumes
-    ]
+    resumes = query.offset((page - 1) * page_size).limit(page_size).all()
+
+    return {
+        "total": total,
+        "page": page,
+        "page_size": page_size,
+        "data": [
+            {
+                "resume_id": resume.id,
+                "total_experience_months": resume.total_experience_months
+            }
+            for resume in resumes
+        ]
+    }
 
 @app.delete("/resumes/{resume_id}")
 def delete_resume(resume_id: str, db: Session = Depends(get_db)):
