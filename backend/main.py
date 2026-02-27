@@ -110,14 +110,32 @@ def get_resume(resume_id: str, db: Session = Depends(get_db)):
     }
 
 @app.get("/resumes")
-def get_all_resumes(db: Session = Depends(get_db)):
-    resumes = db.query(Resume).all()
+def get_all_resumes(min_experience: int = 0, db: Session = Depends(get_db)):
+    resumes = db.query(Resume).filter(
+        Resume.total_experience_months >= min_experience
+    ).all()
 
-    result = []
-
-    for resume in resumes:
-        result.append({
+    return [
+        {
             "resume_id": resume.id,
-            "total_experience_months": resume.total_experience_months
-        })
-    return result
+            "total_experience_months": resume.total_experience_months,
+        }
+        for resume in resumes
+    ]
+
+@app.delete("/resumes/{resume_id}")
+def delete_resume(resume_id: str, db: Session = Depends(get_db)):
+    resume = db.query(Resume).filter(Resume.id == resume_id).first()
+
+    if not resume:
+        return {"error": "Resume not found"}
+
+    # Delete associated experiences first
+    db.query(Experience).filter(
+        Experience.resume_id == resume_id
+    ).delete()
+
+    db.delete(resume)
+    db.commit()
+
+    return {"message": "Resume deleted successfully"}
