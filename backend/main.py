@@ -1,10 +1,12 @@
 from fastapi import FastAPI, UploadFile, File, Depends
 from sqlalchemy.orm import Session
 from database import Base, engine, SessionLocal
-from models import Resume, Experience
+from models import Resume, Experience, Recruiter
 from parser import process_resume
 from file_utils import extract_pdf, extract_docx
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import hashlib
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -29,6 +31,28 @@ def get_db():
     finally:
         db.close()
 
+class LoginRequest(BaseModel):
+    email: str
+    password: str
+
+@app.post("/login")
+def login(data: LoginRequest, db: Session = Depends(get_db)):
+
+    hashed_password = hashlib.sha256(data.password.encode()).hexdigest()
+
+    recruiter = db.query(Recruiter).filter(
+        Recruiter.email == data.email,
+        Recruiter.password == hashed_password
+    ).first()
+
+    if not recruiter:
+        return {"error": "Invalid credentials"}
+    
+    return {
+        "token": recruiter.id,
+        "name": recruiter.name,
+        "email": recruiter.email
+    }
 
 # -------------------------
 # Upload Resume Endpoint

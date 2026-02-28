@@ -22,3 +22,6 @@ backend/resumes.db
 # OS Files
 .DS_Store
 Thumbs.db
+
+# testing files
+backend/dummy.py

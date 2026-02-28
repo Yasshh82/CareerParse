@@ -31,3 +31,11 @@ class Experience(Base):
     is_current_role = Column(Boolean)
 
     resume = relationship("Resume", back_populates="experiences")
+
+class Recruiter(Base):
+    __tablename__ = "recruiters"
+
+    id = Column(String, primary_key=True, default=generate_id)
+    name = Column(String, nullable=False)
+    email = Column(String, nullable=False, unique=True)
+    password = Column(String, nullable=False)
