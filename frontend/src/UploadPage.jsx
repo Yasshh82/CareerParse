@@ -37,7 +37,7 @@ function UploadPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 p-8">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 dark:text-white p-8">
 
       {/* Header */}
       <div className="mb-8">
@@ -50,7 +50,7 @@ function UploadPage() {
       </div>
 
       {/* Upload Card */}
-      <div className="bg-white shadow-lg rounded-xl p-6 mb-8">
+      <div className="bg-white dark:bg-gray-800 shadow-md rounded-xl p-6">
         <h2 className="text-xl font-semibold mb-4">
           Upload Resume
         </h2>

@@ -70,18 +70,18 @@ function ResumeHistory() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="min-h-screen bg-gray-100 dark:bg-gray-900 dark:text-white flex">
 
       {/* Sidebar */}
       <div
-        className={`bg-white shadow-lg transition-all duration-300 flex flex-col ${
+        className={`bg-white dark:bg-gray-800 shadow-lg transition-all duration-300 flex flex-col ${
           sidebarOpen ? "w-64 p-6" : "w-16 items-center py-6"
         }`}
       >
         {/* Toggle Button */}
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="mb-6 text-gray-600 hover:text-black"
+          className="mb-6 text-black-600 hover:text-black"
         >
           {sidebarOpen ? "☰" : "☰"}
         </button>
@@ -165,7 +165,7 @@ function ResumeHistory() {
           {resumes.map((resume) => (
             <div
               key={resume.resume_id}
-              className="bg-white p-6 rounded-xl shadow-md"
+              className="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-md"
             >
               <p className="font-semibold mb-2">
                 Resume ID: {resume.resume_id}
@@ -191,7 +191,7 @@ function ResumeHistory() {
           <button
             disabled={page === 1}
             onClick={() => setPage(page - 1)}
-            className="px-4 py-2 bg-gray-300 rounded-lg disabled:opacity-50"
+            className="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg disabled:opacity-50"
           >
             Previous
           </button>
@@ -203,7 +203,7 @@ function ResumeHistory() {
           <button
             disabled={page === totalPages}
             onClick={() => setPage(page + 1)}
-            className="px-4 py-2 bg-gray-300 rounded-lg disabled:opacity-50"
+            className="px-4 py-2 bg-gray-300 dark:bg-gray-700 rounded-lg disabled:opacity-50"
           >
             Next
           </button>
