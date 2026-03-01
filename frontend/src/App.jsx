@@ -6,6 +6,7 @@ import { useContext, useState, useEffect, useRef } from "react";
 import { ThemeContext } from "./ThemeContext";
 import { AuthContext } from "./AuthContext";
 import Login from "./Login";
+import Signup from "./Signup";
 
 function App() {
   const { user, logout } = useContext(AuthContext);
@@ -30,7 +31,12 @@ function App() {
   }, []);
 
   if (!user) {
-    return <Login />;
+    return (
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+      </Routes>
+    );
   }
 
   return (

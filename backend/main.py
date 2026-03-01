@@ -35,6 +35,11 @@ class LoginRequest(BaseModel):
     email: str
     password: str
 
+class SignupRequest(BaseModel):
+    name: str
+    email: str
+    password: str
+
 @app.post("/login")
 def login(data: LoginRequest, db: Session = Depends(get_db)):
 
@@ -48,6 +53,34 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     if not recruiter:
         return {"error": "Invalid credentials"}
     
+    return {
+        "token": recruiter.id,
+        "name": recruiter.name,
+        "email": recruiter.email
+    }
+
+@app.post("/signup")
+def signup(data: SignupRequest, db: Session = Depends(get_db)):
+
+    existing_user = db.query(Recruiter).filter(
+        Recruiter.email == data.email
+    ).first()
+
+    if existing_user:
+        return {"error": "Email already registered"}
+
+    hashed_password = hashlib.sha256(data.password.encode()).hexdigest()
+
+    recruiter = Recruiter(
+        name=data.name,
+        email=data.email,
+        password=hashed_password
+    )
+
+    db.add(recruiter)
+    db.commit()
+    db.refresh(recruiter)
+
     return {
         "token": recruiter.id,
         "name": recruiter.name,

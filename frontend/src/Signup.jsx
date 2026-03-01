@@ -1,29 +1,31 @@
-import { useState, useContext } from "react";
+import { useState } from "react";
 import axios from "axios";
-import { AuthContext } from "./AuthContext";
 import { useNavigate } from "react-router-dom";
 
-function Login() {
-  const { login } = useContext(AuthContext);
+function Signup() {
   const navigate = useNavigate();
 
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleLogin = async () => {
+  const handleSignup = async () => {
     try {
-      const res = await axios.post("http://127.0.0.1:8000/login", {
+      const res = await axios.post("http://127.0.0.1:8000/signup", {
+        name,
         email,
         password,
       });
 
       if (res.data.error) {
-        alert("Invalid credentials");
+        alert(res.data.error);
         return;
       }
 
-      login(res.data);
-      navigate("/history");
+      alert("Account created successfully. Please login.");
+
+      // Redirect to Login page
+      navigate("/");
 
     } catch (err) {
       console.error(err);
@@ -36,8 +38,16 @@ function Login() {
       <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-md w-96">
 
         <h1 className="text-2xl font-bold mb-6 text-center">
-          Recruiter Login
+          Create Recruiter Account
         </h1>
+
+        <input
+          type="text"
+          placeholder="Full Name"
+          className="border p-2 w-full mb-4 rounded-lg"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
 
         <input
           type="email"
@@ -56,19 +66,20 @@ function Login() {
         />
 
         <button
-          onClick={handleLogin}
+          onClick={handleSignup}
           className="bg-blue-600 text-white w-full py-2 rounded-lg"
         >
-          Login
+          Sign Up
         </button>
 
+        {/* Go to Login Link */}
         <p className="text-center mt-4 text-sm">
-          Don’t have an account?{" "}
+          Already have an account?{" "}
           <span
-            onClick={() => navigate("/signup")}
-            className="text-blue-600 cursor-pointer"
+            onClick={() => navigate("/")}
+            className="text-blue-600 cursor-pointer hover:underline"
           >
-            Sign Up
+            Login
           </span>
         </p>
 
@@ -78,4 +89,4 @@ function Login() {
   );
 }
 
-export default Login;
+export default Signup;
