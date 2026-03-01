@@ -2,7 +2,7 @@ import { Routes, Route, Link } from "react-router-dom";
 import UploadPage from "./UploadPage";
 import ResumeHistory from "./ResumeHistory";
 import ResumeDetails from "./ResumeDetails";
-import { useContext } from "react";
+import { useContext, useState, useEffect, useRef } from "react";
 import { ThemeContext } from "./ThemeContext";
 import { AuthContext } from "./AuthContext";
 import Login from "./Login";
@@ -11,6 +11,24 @@ function App() {
   const { user, logout } = useContext(AuthContext);
   const { darkMode, toggleDarkMode } = useContext(ThemeContext);
 
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef();
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target)
+      ) {
+        setDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   if (!user) {
     return <Login />;
   }
@@ -18,8 +36,8 @@ function App() {
   return (
     <div className="min-h-screen bg-gray-100 dark:bg-gray-900 dark:text-white">
 
-      {/* Top Header */}
-      <div className="bg-white dark:bg-gray-800 shadow-md px-6 py-4 flex items-center justify-between">
+      {/* Sticky Header */}
+      <div className="sticky top-0 z-50 bg-white dark:bg-gray-800 shadow-md px-6 py-4 flex items-center justify-between relative">
 
         {/* Left Navigation */}
         <div className="flex gap-6">
@@ -39,7 +57,7 @@ function App() {
         </div>
 
         {/* Right Profile Section */}
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-6 relative" ref={dropdownRef}>
 
           <button
             onClick={toggleDarkMode}
@@ -66,21 +84,37 @@ function App() {
             />
           </button>
 
-          <div className="text-right">
-            <p className="font-semibold">
-              {user.name}
-            </p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              Recruiter
-            </p>
-          </div>
+          {/* Profile Avatar */}
+          <div className="relative">
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="w-10 h-10 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold"
+            >
+              {user.name.charAt(0)}
+            </button>
 
-          <button
-            onClick={logout}
-            className="bg-red-500 text-white px-4 py-2 rounded-lg"
-          >
-            Logout
-          </button>
+            {/* Dropdown Menu */}
+            {dropdownOpen && (
+              <div className="absolute right-0 mt-3 w-48 bg-white dark:bg-gray-700 rounded-lg shadow-lg py-2">
+
+                <div className="px-4 py-2 border-b dark:border-gray-600">
+                  <p className="font-semibold">{user.name}</p>
+                  <p className="text-sm text-gray-500 dark:text-gray-300">
+                    {user.email}
+                  </p>
+                </div>
+
+                <button
+                  onClick={logout}
+                  className="w-full text-left px-4 py-2 hover:bg-gray-100 dark:hover:bg-gray-600"
+                >
+                  Logout
+                </button>
+
+              </div>
+            )}
+
+          </div>
 
         </div>
 
