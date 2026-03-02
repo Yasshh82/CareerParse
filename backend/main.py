@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, Depends
+from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
 from sqlalchemy.orm import Session
 from database import Base, engine, SessionLocal
 from models import Resume, Experience, Recruiter
@@ -7,6 +7,24 @@ from file_utils import extract_pdf, extract_docx
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import hashlib
+import os
+from dotenv import load_dotenv
+from jose import JWTError, jwt
+from passlib.context import CryptContext
+from fastapi.security import OAuth2PasswordBearer
+from datetime import datetime, timedelta
+
+load_dotenv()
+
+# Fetch variables with fallbacks for safety
+SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY:
+    raise ValueError("SECRET_KEY is not set in environment variables")
+ALGORITHM = os.getenv("ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -31,6 +49,25 @@ def get_db():
     finally:
         db.close()
 
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        recruiter_id: str = payload.get("sub")
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = db.query(Recruiter).filter(Recruiter.id == recruiter_id).first()
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    return user
+
 class LoginRequest(BaseModel):
     email: str
     password: str
@@ -43,18 +80,25 @@ class SignupRequest(BaseModel):
 @app.post("/login")
 def login(data: LoginRequest, db: Session = Depends(get_db)):
 
-    hashed_password = hashlib.sha256(data.password.encode()).hexdigest()
-
     recruiter = db.query(Recruiter).filter(
-        Recruiter.email == data.email,
-        Recruiter.password == hashed_password
+        Recruiter.email == data.email
     ).first()
 
-    if not recruiter:
+    if not recruiter or not verify_password(data.password, recruiter.password):
         return {"error": "Invalid credentials"}
-    
+
+    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+
+    token_data = {
+        "sub": recruiter.id,
+        "exp": expire
+    }
+
+    access_token = jwt.encode(token_data, SECRET_KEY, algorithm=ALGORITHM)
+
     return {
-        "token": recruiter.id,
+        "access_token": access_token,
+        "token_type": "bearer",
         "name": recruiter.name,
         "email": recruiter.email
     }
@@ -69,7 +113,7 @@ def signup(data: SignupRequest, db: Session = Depends(get_db)):
     if existing_user:
         return {"error": "Email already registered"}
 
-    hashed_password = hashlib.sha256(data.password.encode()).hexdigest()
+    hashed_password = get_password_hash(data.password)
 
     recruiter = Recruiter(
         name=data.name,
@@ -104,6 +148,7 @@ async def upload(file: UploadFile = File(...), db: Session = Depends(get_db)):
 
     # Save Resume
     resume = Resume(
+        recruiter_id=current_user.id,
         raw_text=text,
         total_experience_months=total_months
     )
@@ -172,6 +217,7 @@ def get_resume(resume_id: str, db: Session = Depends(get_db)):
 
 @app.get("/resumes")
 def get_all_resumes(
+    current_user: Recruiter = Depends(get_current_user),
     min_experience: int = 0,
     company: str = None,
     sort: str = "desc",

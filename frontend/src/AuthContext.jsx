@@ -23,8 +23,13 @@ export function AuthProvider({ children }) {
   }, [user]);
 
   const login = (data) => {
-    setUser(data);
-  };
+  localStorage.setItem("token", data.access_token);
+  localStorage.setItem("user", JSON.stringify({
+    name: data.name,
+    email: data.email
+  }));
+  setUser({ name: data.name, email: data.email });
+};
 
   const logout = () => {
     setUser(null);

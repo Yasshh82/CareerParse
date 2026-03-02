@@ -1,8 +1,11 @@
 fastapi
+passlib[bcrypt]
+pymupdf
 python-dateutil
 python-docx
+python-dotenv
+python-jose
 python-multipart
-pymupdf
 requests
 sqlalchemy
 uvicorn

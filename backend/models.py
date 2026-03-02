@@ -14,6 +14,8 @@ class Resume(Base):
     total_experience_months = Column(Integer, default=0)
 
     experiences = relationship("Experience", back_populates="resume")
+    recruiter_id = Column(String, ForeignKey("recruiters.id"))
+    recruiter = relationship("Recruiter", back_populates="resumes")
 
 
 class Experience(Base):
