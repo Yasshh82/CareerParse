@@ -1,0 +1,5 @@
+spacy
+spacy-transformers
+pandas
+scikit-learn
+tqdm

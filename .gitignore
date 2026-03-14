@@ -25,3 +25,4 @@ Thumbs.db
 
 # testing files
 backend/dummy.py
+careerparse_ai/dummy.py
