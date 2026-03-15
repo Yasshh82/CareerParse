@@ -1,4 +1,5 @@
 import spacy
+from structure_entities import structure_entities
 from pathlib import Path
 
 # Build a path relative to this script's directory (careerparse_ai/inference)
@@ -20,7 +21,8 @@ Rungta Engineering College
 """
 
 doc = nlp(text)
-print("\nDetected Entities:\n")
 
-for ent in doc.ents:
-    print(ent.text, "->", ent.label_)
+result = structure_entities(doc)
+
+print("\nStructured Output:\n")
+print(result)
