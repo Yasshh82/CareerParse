@@ -5,7 +5,7 @@ from models import Resume, Experience, Recruiter
 from parser import process_resume
 from file_utils import extract_pdf, extract_docx
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import hashlib
 import os
 from dotenv import load_dotenv
@@ -13,6 +13,7 @@ from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi.security import OAuth2PasswordBearer
 from datetime import datetime, timedelta
+from services.resume_parser import parse_resume
 
 load_dotenv()
 
@@ -50,9 +51,11 @@ def get_db():
         db.close()
 
 def verify_password(plain_password, hashed_password):
+    plain_password = plain_password[:72] #bcrypt limit
     return pwd_context.verify(plain_password, hashed_password)
 
-def get_password_hash(password):
+def get_password_hash(password: str):
+    password = password[:72] #bcrypt limit
     return pwd_context.hash(password)
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
@@ -75,7 +78,7 @@ class LoginRequest(BaseModel):
 class SignupRequest(BaseModel):
     name: str
     email: str
-    password: str
+    password: str = Field(..., min_length=6, max_length=72)
 
 @app.post("/login")
 def login(data: LoginRequest, db: Session = Depends(get_db)):
@@ -85,7 +88,7 @@ def login(data: LoginRequest, db: Session = Depends(get_db)):
     ).first()
 
     if not recruiter or not verify_password(data.password, recruiter.password):
-        return {"error": "Invalid credentials"}
+        raise HTTPException(status_code=401, detail="Invalid credentials")
 
     expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
 
@@ -111,7 +114,7 @@ def signup(data: SignupRequest, db: Session = Depends(get_db)):
     ).first()
 
     if existing_user:
-        return {"error": "Email already registered"}
+        raise HTTPException(status_code=400, detail="Email already registered")
 
     hashed_password = get_password_hash(data.password)
 
@@ -126,6 +129,7 @@ def signup(data: SignupRequest, db: Session = Depends(get_db)):
     db.refresh(recruiter)
 
     return {
+        "message": "User created successfully",
         "token": recruiter.id,
         "name": recruiter.name,
         "email": recruiter.email
@@ -135,7 +139,11 @@ def signup(data: SignupRequest, db: Session = Depends(get_db)):
 # Upload Resume Endpoint
 # -------------------------
 @app.post("/upload")
-async def upload(file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload(
+    file: UploadFile = File(...),
+    current_user: Recruiter = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
 
     if file.filename.endswith(".pdf"):
         text = extract_pdf(file.file)
