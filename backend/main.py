@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File, Depends
+from fastapi import FastAPI, HTTPException, Security, UploadFile, File, Depends
 from sqlalchemy.orm import Session
 from database import Base, engine, SessionLocal
 from models import Resume, Experience, Recruiter
@@ -11,7 +11,7 @@ import os
 from dotenv import load_dotenv
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import OAuth2PasswordBearer, HTTPBearer, HTTPAuthorizationCredentials
 from datetime import datetime, timedelta
 from services.resume_parser import parse_resume
 
@@ -25,8 +25,8 @@ ALGORITHM = os.getenv("ALGORITHM", "HS256")
 ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", 60))
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
-
+#oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+security = HTTPBearer()
 # Create tables
 Base.metadata.create_all(bind=engine)
 
@@ -58,7 +58,8 @@ def get_password_hash(password: str):
     password = password[:72] #bcrypt limit
     return pwd_context.hash(password)
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def get_current_user(credentials: HTTPAuthorizationCredentials = Security(security), db: Session = Depends(get_db)):
+    token = credentials.credentials
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         recruiter_id: str = payload.get("sub")
@@ -152,7 +153,11 @@ async def upload(
     else:
         return {"error": "Unsupported file"}
 
-    companies, total_months = process_resume(text)
+    parsed_output = parse_resume(text)
+
+    companies = parsed_output.get("Companies", [])
+
+    total_months = 0
 
     # Save Resume
     resume = Resume(
@@ -168,17 +173,13 @@ async def upload(
     for comp in companies:
         exp = Experience(
             resume_id=resume.id,
-            company_name=comp["company_name"],
-            role=comp["role"],
-            tenure_raw=(
-            ", ".join(comp["tenure_raw"])
-            if isinstance(comp["tenure_raw"], list)
-            else comp["tenure_raw"]
-            ),
-            start_date=comp["start_date"],
-            end_date=comp["end_date"],
-            duration_months=comp["duration_months"],
-            is_current_role=comp["is_current_role"]
+            company_name=comp.get("Company Name"),
+            role=comp.get("Role"),
+            tenure_raw=None,
+            start_date=comp.get("Start Date"),
+            end_date=comp.get("End Date"),
+            duration_months=None,
+            is_current_role=bool(comp.get("Current_Flag"))
         )
         db.add(exp)
 
@@ -186,8 +187,7 @@ async def upload(
 
     return {
         "resume_id": resume.id,
-        "Companies": companies,
-        "total_experience_months": total_months
+        "parsed_data": parsed_output
     }
 
 
